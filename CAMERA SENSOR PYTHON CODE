@@ -1,0 +1,58 @@
+import cv2
+import mediapipe as mp
+import requests
+import time
+
+ESP_IP = "http://192.168.1.15"  # CHANGE THIS
+
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(min_detection_confidence=0.7)
+cap = cv2.VideoCapture(0)
+
+last_command = ""
+cooldown = 1  # seconds
+
+while True:
+    success, img = cap.read()
+    imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    results = hands.process(imgRGB)
+
+    command = ""
+
+    if results.multi_hand_landmarks:
+        for hand in results.multi_hand_landmarks:
+
+            fingers = []
+            tips = [8, 12, 16]
+
+            for tip in tips:
+                if hand.landmark[tip].y < hand.landmark[tip - 2].y:
+                    fingers.append(1)
+                else:
+                    fingers.append(0)
+
+            count = fingers.count(1)
+
+            if count == 1:
+                command = "RED"
+            elif count == 2:
+                command = "YELLOW"
+            elif count >= 3:
+                command = "GREEN"
+
+    if command != "" and command != last_command:
+        try:
+            requests.get(ESP_IP + "/" + command, timeout=0.5)
+            print("Sent:", command)
+            last_command = command
+            time.sleep(cooldown)
+        except:
+            print("ESP not reachable")
+
+    cv2.imshow("Hand Traffic Light", img)
+
+    if cv2.waitKey(1) & 0xFF == 27:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
