@@ -1,0 +1,55 @@
+#include <ESP8266WiFi.h>
+W
+const char* ssid = "YOUR_WIFI_NAME";
+const char* password = "YOUR_WIFI_PASSWORD";
+
+WiFiServer server(80);
+
+#define RED D5
+#define YELLOW D6
+#define GREEN D7
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(RED, OUTPUT);
+  pinMode(YELLOW, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+
+  digitalWrite(RED, LOW);
+  digitalWrite(YELLOW, LOW);
+  digitalWrite(GREEN, LOW);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+
+  Serial.println("Connected!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  server.begin();
+}
+
+void loop() {
+  WiFiClient client = server.available();
+  if (!client) return;
+
+  String request = client.readStringUntil('\r');
+  client.flush();
+
+  digitalWrite(RED, LOW);
+  digitalWrite(YELLOW, LOW);
+  digitalWrite(GREEN, LOW);
+
+  if (request.indexOf("/RED") != -1) digitalWrite(RED, HIGH);
+  if (request.indexOf("/YELLOW") != -1) digitalWrite(YELLOW, HIGH);
+  if (request.indexOf("/GREEN") != -1) digitalWrite(GREEN, HIGH);
+
+  client.println("HTTP/1.1 200 OK");
+  client.println("OK");
+  client.stop();
+}
+
